@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NO MAN'S SKY — Réplica</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🪐%3C/text%3E%3C/svg%3E">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<!-- ============ PANTALLA DE CARGA / TRANSICIONES ============ -->
+<div id="loading" class="overlay hidden">
+  <div class="load-inner">
+    <div class="load-title" id="load-title">GENERANDO SISTEMA</div>
+    <div class="load-bar"><div class="load-bar-fill" id="load-bar"></div></div>
+    <div class="load-sub" id="load-sub">…</div>
+  </div>
+</div>
+
+<!-- ============ PANTALLA DE TÍTULO ============ -->
+<div id="title" class="overlay hidden">
+  <div class="title-box">
+    <div class="title-logo">NO MAN'S SKY</div>
+    <div class="title-sub">R É P L I C A &nbsp;·&nbsp; UN HOMENAJE A HELLO GAMES</div>
+    <div class="title-buttons">
+      <button id="btn-continue" class="tbtn hidden">CONTINUAR VIAJE</button>
+      <button id="btn-new" class="tbtn">NUEVO VIAJE</button>
+      <button id="btn-help" class="tbtn">CONTROLES</button>
+    </div>
+    <div class="title-help hidden" id="title-help">
+      <div class="help-cols">
+        <div>
+          <div class="help-head">EN SUPERFICIE</div>
+          <div class="help-row"><span>WASD / Flechas</span>moverse</div>
+          <div class="help-row"><span>Shift</span>correr</div>
+          <div class="help-row"><span>Espacio</span>saltar</div>
+          <div class="help-row"><span>E</span>escanear / interactuar</div>
+          <div class="help-row"><span>Clic der. (mantener)</span>minar</div>
+          <div class="help-row"><span>Tab / B</span>inventario / construir</div>
+          <div class="help-row"><span>R</span>despegar (junto a tu nave)</div>
+          <div class="help-row"><span>M</span>mapa del sistema</div>
+        </div>
+        <div>
+          <div class="help-head">EN EL ESPACIO</div>
+          <div class="help-row"><span>Ratón</span>dirigir la nave</div>
+          <div class="help-row"><span>W / S</span>acelerar / frenar</div>
+          <div class="help-row"><span>A / D</span>inclinarse</div>
+          <div class="help-row"><span>Shift</span>impulso</div>
+          <div class="help-row"><span>E</span>aterrizar (cerca de un planeta)</div>
+          <div class="help-row"><span>J</span>salto interestelar</div>
+          <div class="help-row"><span>M</span>mapa del sistema</div>
+          <div class="help-row"><span>Esc</span>pausa</div>
+        </div>
+      </div>
+    </div>
+    <div class="title-foot">UN JUEGO PROCEDURAL · CADA PLANETA ES ÚNICO · SIN FIN</div>
+  </div>
+</div>
+
+<!-- ============ HUD ============ -->
+<div id="hud" class="hidden">
+  <div class="hud-top-center">
+    <div id="hud-planet-name">—</div>
+    <div id="hud-planet-sub">—</div>
+  </div>
+  <div class="hud-top-right">
+    <div class="hud-chip"><span class="chip-ico">⚡</span><div class="chip-meter"><div id="meter-battery" class="chip-fill fill-energy"></div></div><span id="val-battery">100%</span></div>
+    <div class="hud-chip hidden" id="chip-o2"><span class="chip-ico">💨</span><div class="chip-meter"><div id="meter-o2" class="chip-fill fill-o2"></div></div><span id="val-o2">100%</span></div>
+    <div class="hud-chip"><span class="chip-ico">◔</span><span id="val-time">00:00</span></div>
+  </div>
+  <div class="hud-compass"><div id="compass-strip"></div></div>
+
+  <div class="hud-bottom-left">
+    <div id="hud-tool">MULTIHERRAMIENTA</div>
+    <div id="hud-mode" class="hidden">MODO CONSTRUCCIÓN</div>
+  </div>
+
+  <div class="hud-bottom-center">
+    <div id="quickbar"></div>
+    <div id="hud-prompt" class="hidden"></div>
+  </div>
+
+  <div class="hud-center">
+    <svg id="crosshair" width="46" height="46" viewBox="0 0 46 46">
+      <g stroke="rgba(255,255,255,0.85)" stroke-width="1.6" fill="none">
+        <path d="M 23 4 L 23 10"/><path d="M 23 36 L 23 42"/>
+        <path d="M 4 23 L 10 23"/><path d="M 36 23 L 42 23"/>
+      </g>
+      <circle cx="23" cy="23" r="1.6" fill="rgba(255,255,255,0.9)"/>
+      <circle id="mine-ring" cx="23" cy="23" r="17" fill="none" stroke="#6cf3ff" stroke-width="2.4"
+              stroke-dasharray="106.8" stroke-dashoffset="106.8" transform="rotate(-90 23 23)" class="hidden"/>
+    </svg>
+    <div id="scan-line-anchor"></div>
+  </div>
+
+  <div id="scan-card" class="hidden">
+    <div id="scan-title">—</div>
+    <div id="scan-body">—</div>
+    <div id="scan-action">—</div>
+  </div>
+
+  <div id="toasts"></div>
+
+  <div id="warp-flash" class="hidden"></div>
+</div>
+
+<!-- ============ MENÚS ============ -->
+<div id="menu-craft" class="menu hidden">
+  <div class="menu-panel">
+    <div class="menu-head">
+      <span class="menu-tabs"><button class="tab active" data-tab="craft">FABRICAR</button><button class="tab" data-tab="inv">INVENTARIO</button></span>
+      <button class="menu-close">ESC</button>
+    </div>
+    <div class="menu-body">
+      <div id="tab-craft" class="tabpage">
+        <div class="craft-list" id="craft-list"></div>
+      </div>
+      <div id="tab-inv" class="tabpage hidden">
+        <div class="inv-cols">
+          <div>
+            <div class="inv-head">RECURSOS</div>
+            <div class="inv-grid" id="inv-res"></div>
+          </div>
+          <div>
+            <div class="inv-head">EQUIPO / MÓDULOS</div>
+            <div class="inv-grid" id="inv-items"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="menu-foot" id="menu-craft-foot">Los recursos se obtienen minando nodos luminosos con la multiherramienta.</div>
+  </div>
+</div>
+
+<div id="menu-build" class="menu hidden">
+  <div class="menu-panel">
+    <div class="menu-head"><span class="menu-title">CONSTRUCCIÓN</span><button class="menu-close">ESC</button></div>
+    <div class="menu-body">
+      <div class="build-list" id="build-list"></div>
+    </div>
+    <div class="menu-foot">Clic izq. colocar · Clic der. desmontar (50% de reembolso) · 1m de rejilla</div>
+  </div>
+</div>
+
+<div id="menu-map" class="menu hidden">
+  <div class="menu-panel">
+    <div class="menu-head"><span class="menu-title" id="map-system-name">SISTEMA</span><button class="menu-close">ESC</button></div>
+    <div class="menu-body">
+      <div class="map-list" id="map-list"></div>
+    </div>
+    <div class="menu-foot">Selecciona un planeta para viajar hasta su órbita · [J] salto interestelar</div>
+  </div>
+</div>
+
+<div id="menu-pause" class="menu hidden">
+  <div class="menu-panel narrow">
+    <div class="menu-head"><span class="menu-title">PAUSA</span><span></span></div>
+    <div class="menu-body pause-body">
+      <button class="tbtn" id="btn-resume">REANUDAR</button>
+      <button class="tbtn" id="btn-save">GUARDAR</button>
+      <button class="tbtn" id="btn-mute">SONIDO: SÍ</button>
+      <button class="tbtn" id="btn-quit">VOLVER AL TÍTULO</button>
+    </div>
+  </div>
+</div>
+
+<div id="fatal" class="overlay hidden">
+  <div class="load-inner">
+    <div class="load-title" style="color:#ff8080">ERROR</div>
+    <div class="load-sub" id="fatal-msg" style="max-width:60ch">—</div>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
